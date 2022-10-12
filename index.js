@@ -13,41 +13,41 @@ const { exec } = require('child_process');
 var outPages = [];
 
 
-const handleArtBoard = (layer, pageName) => {
+const handleArtBoard = (layer, pageName, output) => {
     if (layer.type == 'artboard') {
         StyleStore.reset();
         styleRender(layer, null, '../');
         var html = htmlRender(layer, null, '../');
         html = template(html, layer);
-        fse.outputFileSync(`./output/html/${pageName}/artboard-${layer.name}.html`, html, e => { });
-        fse.outputFileSync(`./output/html/${pageName}/artboard-${layer.name}.css`, StyleStore.toString(), (e) => { });
+        fse.outputFileSync(`${output}/html/${pageName}/artboard-${layer.name}.html`, html, e => { });
+        fse.outputFileSync(`${output}/html/${pageName}/artboard-${layer.name}.css`, StyleStore.toString(), (e) => { });
         outPages.push({
             name: layer.name,
             url: `./${pageName}/artboard-${layer.name}.html`
         });
     } else {
         layer.childrens && layer.childrens.forEach((child) => {
-            handleArtBoard(child, pageName);
+            handleArtBoard(child, pageName, output);
         });
     }
 };
 
-module.exports = function(source){
+module.exports = function(source, output){
     // 解压 sketch 文件
-    fse.removeSync('./output');
+    fse.removeSync(output);
     const zip = new AdmZip(source)
-    zip.extractAllTo('./output/', true)
+    zip.extractAllTo(output, true)
 
     // 复制图片到结果文件夹
-    fs.readdirSync('./output/images').forEach((image) => {
-        fse.copySync(`./output/images/${image}`, `./output/html/images/${image}.png`);
+    fs.readdirSync(`${output}/images`).forEach((image) => {
+        fse.copySync(`${output}/images/${image}`, `${output}/html/images/${image}.png`);
     })
-    // fse.copy('./template/index.html', './output/html/index.html', err => { });
+    fse.copySync(path.join(__dirname, './template/index.html'), `${output}/html/index.html`);
     // 对所有页面进行通用组件提取
-    let files = fs.readdirSync('./output/pages');
+    let files = fs.readdirSync(`${output}/pages`);
     let fileStore = {};
     files.forEach((f) => {
-        fileStore[f] = JSON.parse(fs.readFileSync('./output/pages/' + f).toString());
+        fileStore[f] = JSON.parse(fs.readFileSync(`${output}/pages/` + f).toString());
     });
     outPages = [];
     outResults = [];
@@ -59,10 +59,10 @@ module.exports = function(source){
     });
     outResults.forEach((result) => {
         if (result.type === 'page') {
-            handleArtBoard(result, `page-${result.name}`);
+            handleArtBoard(result, `page-${result.name}`, output);
         }
     });
-    fse.outputFile('./output/html/index.js', (() => {
+    fse.outputFile(`${output}/html/index.js`, (() => {
         let r = '';
         outPages.forEach((p) => {
             r += `addTab('${p.url}','${p.name}');`;
@@ -70,8 +70,6 @@ module.exports = function(source){
         return r;
     })(), e => {
     });
-
-    console.log(fs.readFileSync(`./output/html/page-${outResults[0].name}/artboard-Frame.html`).toString())
 
     // exec(`rm -rf output/*;unzip -o ${source} -d output;`, (err, stdout, stderr) => {
     //     if (err) {
