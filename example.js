@@ -1,9 +1,4 @@
-const source = './ooto.sketch';
-const fse = require('fs-extra');
+const source = './../商学院17年12月份.sketch';
 
-var parser = require('./index');
-parser(source, function(){
-    fse.copy('./output/html', './docs', err => {
-    });
-});
-
+var parser = require('./index')
+parser(source)

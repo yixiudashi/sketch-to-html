@@ -3,6 +3,7 @@ const SymbolStore = require('./../store/SymbolStore');
 const styleParser = require('./styleParser');
 const pathParser = require('./pathParser');
 const pinyin = require('node-pinyin');
+const result = [];
 const nameStore = [];
 const rename = function (name) {
     let index = 1;
@@ -53,9 +54,8 @@ const handleItem = function (item) {
         result.frame.x = null;
         result.frame.y = null;
     }
-    if(item.symbolID) {
-        result.symbolID = item.symbolID;
-    }
+    result.symbolID = item.symbolID;
+
     return result;
 };
 
@@ -67,7 +67,19 @@ const layerParser = function (item) {
         item.layers.forEach((_item) => {
             let r = layerParser(_item);
             if (r) {
-                element.childrens.push(r);
+                if (r.isMask) {
+                    element.style = {
+                        ...element.style,
+                        ...r.style,
+                    }
+                } else if (r.name.startsWith('Background') && r.id.indexOf('background') > -1) {
+                    element.style = {
+                        ...element.style,
+                        ...r.style,
+                    }
+                } else {
+                    element.childrens.push(r);
+                }
             }
         });
     }
